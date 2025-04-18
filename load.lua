@@ -135,7 +135,8 @@ do
 	local OptionsSetCollisionGroup = nil
 	local OptionsSimulationRadius = nil
 	local OptionsTeleportRadius = nil
-
+	local OptionsUseServerBreakJoints
+	
 	local osclock = os.clock
 
 	local PreRenderConnection = nil
@@ -174,7 +175,7 @@ do
 	local Vector3new = Vector3.new
 	local FlingVelocity = Vector3new(16384, 16384, 16384)
 	local HatDropLinearVelocity = Vector3new(0, 27, 0)
-	local HideCharacterOffset = Vector3new(0, 30, 0)
+	local HideCharacterOffset = Vector3new(0, - 30, 0)
 	local Vector3one = Vector3.one
 	local Vector3xzAxis = Vector3new(1, 0, 1)
 	local Vector3zero = Vector3.zero
@@ -447,7 +448,7 @@ do
 				end
 
 				if Highlight then
-					local HighlightObject = type(Highlight) == "boolean" and Instancenew("Highlight") or Clone(Highlight)
+					local HighlightObject = type(Highlight) == "boolean" and Highlight and Instancenew("Highlight") or Clone(Highlight)
 					HighlightObject.Adornee = Model
 					HighlightObject.Parent = Model
 
@@ -538,7 +539,7 @@ do
 								local Offset = Vector3zero
 
 								if PredictionFling then
-									Vector3zero = ( Position - LastPosition ) / DeltaTime * 0.13
+									Offset = ( Position - LastPosition ) / DeltaTime * 0.13
 								end
 
 								HumanoidRootPart.AssemblyAngularVelocity = FlingVelocity
@@ -586,7 +587,8 @@ do
 						end
 					end)
 				elseif OptionsHideCharacter then
-					local RootPartCFrame = RigHumanoidRootPart.CFrame - HideCharacterOffset
+					local HideCharacterOffset = typeof(OptionsHideCharacter) == "Vector3" and OptionsHideCharacter or HideCharacterOffset
+					local RootPartCFrame = RigHumanoidRootPart.CFrame + HideCharacterOffset
 
 					taskspawn(function()
 						while IsAlive do
@@ -616,6 +618,10 @@ do
 			ModelBreakJoints(Character)
 
 			if Humanoid then
+				if replicatesignal and OptionsUseServerBreakJoints then
+					replicatesignal(Humanoid.ServerBreakJoints)
+				end
+				
 				ChangeState(Humanoid, Dead)
 				Wait(Humanoid.Died)
 			end
@@ -759,11 +765,11 @@ do
 			RigHumanoid.Jump = Humanoid.Jump
 		end
 
-		if IsRegistered then
+		--[[if IsRegistered then
 			SetCore(StarterGui, "ResetButtonCallback", BindableEvent)
 		else
 			IsRegistered = pcall(SetCore, StarterGui, "ResetButtonCallback", BindableEvent)
-		end
+		end]]
 	end
 
 	local OnPreRender = function()
@@ -835,6 +841,7 @@ do
 			OptionsSetCollisionGroup = Options.SetCollisionGroup
 			OptionsSimulationRadius = Options.SimulationRadius
 			OptionsTeleportRadius = Options.TeleportRadius
+			OptionsUseServerBreakJoints = Options.UseServerBreakJoints
 
 			if OptionsDisableHealthBar then
 				IsHealthEnabled = GetCoreGuiEnabled(StarterGui, Health)
@@ -891,6 +898,21 @@ do
 			if OptionsDisableCharacterCollisions or OptionsDisableRigCollisions then
 				OnPreSimulation()
 				tableinsert(RBXScriptConnections, Connect(PreSimulation, OnPreSimulation))
+			end
+			
+			IsRegistered = pcall(SetCore, StarterGui, "ResetButtonCallback", BindableEvent)
+			
+			if not IsRegistered then
+				taskspawn(function()
+					for Index = 1, 7 do
+						if not IsRegistered then
+							IsRegistered = pcall(SetCore, StarterGui, "ResetButtonCallback", BindableEvent)
+							taskwait()
+						else
+							break
+						end
+					end
+				end)
 			end
 
 			return {
