@@ -1,6 +1,3 @@
--- Made by @emperrrr (Discord)
--- Discord server: https://discord.gg/UJ7YtqadPJ
-
 do
 	local Accessories = {}
 
